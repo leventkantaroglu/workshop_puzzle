@@ -7,24 +7,51 @@ import 'position.dart';
 const String emptyItemValue = " ";
 
 typedef Board = List<List<Item>>;
+late Board board;
+late int boardSize;
+late List<String> values;
 
 void main(List<String> arguments) {
+  if (!isValueListValid()) return;
   initGame();
   gameCycle();
+}
+
+bool isValueListValid() {
+  if (values.length % sqrt(values.length) == 0) {
+    return true;
+  }
+  print("-> Invalid values to create board");
+  return false;
 }
 
 void initGame() {
   clearScreen();
   displayMessage("Game Started");
-  board = createBoard();
+  createBoard();
+  createValues();
+  shuffleValues();
+  locateValues();
 }
 
 void clearScreen() {
   print("\x1B[2J\x1B[0;0H");
 }
 
-Board createBoard() {
-  List<String> values = [
+void createBoard() {
+  boardSize = sqrt(values.length).toInt();
+  board = [];
+  createLines();
+}
+
+void createLines() {
+  for (var i = 0; i < boardSize; i++) {
+    board.add([]);
+  }
+}
+
+void createValues() {
+  values = [
     "1",
     "2",
     "3",
@@ -42,33 +69,79 @@ Board createBoard() {
     "F",
     emptyItemValue,
   ];
-  values.shuffle();
-  while (!isBoardItemsLocated()) {
-    var randomLineIndex = Random().nextInt(4);
-
-    if (board[randomLineIndex].length != 4 && values.isNotEmpty) {
-      board[randomLineIndex].add(
-        Item(
-          value: values.first,
-          position: Position(
-            board[randomLineIndex].length,
-            randomLineIndex,
-          ),
-        ),
-      );
-      values.removeAt(0);
-    }
-  }
-  return board;
 }
 
-Board board = [[], [], [], []];
+void shuffleValues() {
+  values.shuffle();
+}
+
+void locateValues() {
+  while (!isAllBoardItemsLocated()) {
+    tryToLocateItem();
+  }
+}
+
+bool isAllBoardItemsLocated() {
+  for (var line in board) {
+    if (line.length != boardSize) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void tryToLocateItem() {
+  var lineIndex = Random().nextInt(boardSize);
+
+  if (isLocatingAvailable(board[lineIndex].length)) {
+    var item = createItem(
+      values.first,
+      board[lineIndex].length,
+      lineIndex,
+    );
+    locateItem(lineIndex, item);
+    popValue();
+  }
+}
+
+bool isLocatingAvailable(int currentLineLength) {
+  return hasEmptyPosition(currentLineLength) && hasNotLocatedItem()
+      ? true
+      : false;
+}
+
+void locateItem(int randomLineIndex, Item item) {
+  board[randomLineIndex].add(item);
+}
+
+void popValue() {
+  values.removeAt(0);
+}
+
+bool hasNotLocatedItem() {
+  return values.isNotEmpty;
+}
+
+bool hasEmptyPosition(int listLength) {
+  return listLength < boardSize ? true : false;
+}
+
+Item createItem(String value, int x, int y) {
+  return Item(
+    value: value,
+    position: createPosition(x, y),
+  );
+}
+
+Position createPosition(int x, int y) {
+  return Position(x, y);
+}
 
 void gameCycle() {
   while (true) {
-    printBoard(board);
-    var key = stdin.readLineSync()?.toUpperCase();
+    printBoard();
     clearScreen();
+    var key = getUserInput();
     if (isValidInput(key)) {
       if (isValidMovement(key!)) {
         move(key);
@@ -89,13 +162,8 @@ void gameCycle() {
   }
 }
 
-bool isBoardItemsLocated() {
-  for (var line in board) {
-    if (line.length != 4) {
-      return false;
-    }
-  }
-  return true;
+String? getUserInput() {
+  return stdin.readLineSync()?.toUpperCase();
 }
 
 bool isCompleted() {
@@ -111,7 +179,7 @@ void move(String key) {
 }
 
 bool isValidInput(String? key) {
-  return (key is String && isBoardItem(board, key)) ? true : false;
+  return (key is String && isBoardItem(key)) ? true : false;
 }
 
 Item getItem(String key) {
@@ -128,32 +196,33 @@ Item getItem(String key) {
 
 bool isValidMovement(String key) {
   Position selectedItemPos = getItem(key).position;
-  if ((selectedItemPos.y + 1 >= 0 &&
-          selectedItemPos.y + 1 < 4 &&
-          board[selectedItemPos.y + 1]
-                      [selectedItemPos.x]
-                  .value ==
-              emptyItemValue) ||
-      (selectedItemPos.y - 1 >= 0 &&
-          selectedItemPos.y - 1 < 4 &&
-          board[selectedItemPos.y - 1]
-                      [selectedItemPos.x]
-                  .value ==
-              emptyItemValue) ||
-      (selectedItemPos.x - 1 >= 0 &&
-          selectedItemPos.x - 1 < 4 &&
-          board[selectedItemPos.y][selectedItemPos.x - 1].value ==
-              emptyItemValue) ||
-      (selectedItemPos.x + 1 >= 0 &&
-          selectedItemPos.x + 1 < 4 &&
-          board[selectedItemPos.y][selectedItemPos.x + 1].value ==
-              emptyItemValue)) {
+
+  var isBottomMovementValid = (selectedItemPos.y + 1 >= 0 &&
+      selectedItemPos.y + 1 < 4 &&
+      board[selectedItemPos.y + 1][selectedItemPos.x].value == emptyItemValue);
+
+  var isTopMovementValid = selectedItemPos.y - 1 >= 0 &&
+      selectedItemPos.y - 1 < 4 &&
+      board[selectedItemPos.y - 1][selectedItemPos.x].value == emptyItemValue;
+
+  var isLeftMovementValid = selectedItemPos.x - 1 >= 0 &&
+      selectedItemPos.x - 1 < 4 &&
+      board[selectedItemPos.y][selectedItemPos.x - 1].value == emptyItemValue;
+
+  var isRightMovementValid = selectedItemPos.x + 1 >= 0 &&
+      selectedItemPos.x + 1 < 4 &&
+      board[selectedItemPos.y][selectedItemPos.x + 1].value == emptyItemValue;
+
+  if (isBottomMovementValid ||
+      isTopMovementValid ||
+      isLeftMovementValid ||
+      isRightMovementValid) {
     return true;
   }
   return false;
 }
 
-bool isBoardItem(Board board, String key) {
+bool isBoardItem(String key) {
   for (var line in board) {
     for (Item item in line) {
       if (item.value == key) {
@@ -164,17 +233,16 @@ bool isBoardItem(Board board, String key) {
   return false;
 }
 
-void printBoard(Board board) {
+void printBoard() {
   print("\n");
-  print("  -----------------");
-
+  print("     -----------------");
   for (var line in board) {
-    var printableline = "  |";
+    var printableline = "     |";
     for (Item item in line) {
       printableline += " ${item.value} |";
     }
     print(printableline);
-    print("  -----------------");
+    print("     -----------------");
   }
   print("\n");
 }
@@ -182,4 +250,3 @@ void printBoard(Board board) {
 void displayMessage(String text) {
   print("-> " + text);
 }
-
