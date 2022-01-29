@@ -30,7 +30,6 @@ void initGame() {
   clearScreen();
   displayMessage("Game Started");
   createBoard();
-
   shuffleValues();
   locateValues();
 }
@@ -141,8 +140,8 @@ Position createPosition(int x, int y) {
 void gameCycle() {
   while (true) {
     printBoard();
-    clearScreen();
     var key = getUserInput();
+    clearScreen();
     if (isValidInput(key)) {
       if (isValidMovement(key!)) {
         move(key);
