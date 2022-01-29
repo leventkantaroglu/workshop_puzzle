@@ -12,6 +12,7 @@ late int boardSize;
 late List<String> values;
 
 void main(List<String> arguments) {
+  createValues();
   if (!isValueListValid()) return;
   initGame();
   gameCycle();
@@ -29,7 +30,7 @@ void initGame() {
   clearScreen();
   displayMessage("Game Started");
   createBoard();
-  createValues();
+
   shuffleValues();
   locateValues();
 }
